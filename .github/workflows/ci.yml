@@ -49,9 +49,9 @@ jobs:
         with:
           version: latest
 
-  # Non-required: exercises the client against a real Dovecot Pigeonhole
-  # server. Kept out of branch protection so a server hiccup never blocks
-  # a merge; static/test/lint remain the gates.
+  # Required check: exercises the client against a real Dovecot Pigeonhole
+  # server so the wire protocol stays verified against the reference
+  # implementation on every change.
   integration:
     runs-on: ubuntu-latest
     steps:
