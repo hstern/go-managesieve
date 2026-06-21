@@ -369,7 +369,19 @@ func (h *serverHandler) serverCaps() Capabilities {
 	if mechs := h.sess.AuthMechanisms(); len(mechs) > 0 {
 		caps.SASL = mechs
 	}
+	if h.authed {
+		if o, ok := h.sess.(SessionOwner); ok {
+			caps.Owner = o.Owner()
+		}
+	}
 	return caps
+}
+
+// SessionOwner is an optional interface a Session may implement so the
+// server advertises the OWNER capability — the authenticated user — in
+// the capability listing it sends after a successful AUTHENTICATE.
+type SessionOwner interface {
+	Owner() string
 }
 
 // --- write helpers (sticky error) ---

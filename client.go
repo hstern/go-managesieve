@@ -148,12 +148,15 @@ func (c *Client) Authenticate(m SASLClient) error {
 			return err
 		}
 		if st, ok := parseStatus(toks); ok {
-			if st.status == statusOK {
-				if err := deliverSASLFinal(m, st); err != nil {
-					return err
-				}
+			if st.status != statusOK {
+				return st.err()
 			}
-			return st.err()
+			if err := deliverSASLFinal(m, st); err != nil {
+				return err
+			}
+			// Re-read capabilities so post-authentication additions (e.g.
+			// the OWNER capability) are reflected in Capabilities().
+			return c.Capability()
 		}
 		challenge, err := decodeChallenge(toks)
 		if err != nil {
