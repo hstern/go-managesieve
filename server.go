@@ -9,6 +9,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Backend builds a Session for each accepted connection. It is the entry
@@ -71,6 +72,12 @@ type Server struct {
 	Implementation string
 	// SieveExtensions is advertised in the SIEVE capability.
 	SieveExtensions []string
+	// ReadTimeout, if non-zero, bounds how long the server waits for each
+	// client command before closing the connection.
+	ReadTimeout time.Duration
+	// WriteTimeout, if non-zero, bounds how long the server may take to
+	// write each response.
+	WriteTimeout time.Duration
 }
 
 // NewServer returns a Server using b, with a default IMPLEMENTATION
@@ -116,8 +123,10 @@ type serverHandler struct {
 }
 
 func (h *serverHandler) run() {
+	h.applyDeadlines()
 	h.greet()
 	for h.err == nil {
+		h.applyDeadlines()
 		toks, err := h.c.r.readLine()
 		if err != nil {
 			break
@@ -302,11 +311,19 @@ func (h *serverHandler) authenticate(args []token) {
 		}
 		if done {
 			h.authed = true
-			h.reply(statusOK, nil, "Authentication successful")
+			if len(challenge) > 0 {
+				// Server-final data (e.g. mutual-auth signature) travels
+				// in the SASL response code of the success line.
+				final := base64.StdEncoding.EncodeToString(challenge)
+				h.reply(statusOK, &ResponseCode{Name: CodeSASL, Arg: final}, "Authentication successful")
+			} else {
+				h.reply(statusOK, nil, "Authentication successful")
+			}
 			return
 		}
 		h.write(quote(base64.StdEncoding.EncodeToString(challenge)) + "\r\n")
 		h.flush()
+		h.applyDeadlines()
 		toks, rerr := h.c.r.readLine()
 		if rerr != nil {
 			h.err = rerr
@@ -369,6 +386,19 @@ func (h *serverHandler) flush() {
 		return
 	}
 	h.err = h.c.w.Flush()
+}
+
+// applyDeadlines sets per-command read/write deadlines from the Server's
+// configured timeouts. A zero timeout leaves the corresponding deadline
+// untouched (no limit).
+func (h *serverHandler) applyDeadlines() {
+	now := time.Now()
+	if h.s.ReadTimeout > 0 {
+		_ = h.c.nc.SetReadDeadline(now.Add(h.s.ReadTimeout))
+	}
+	if h.s.WriteTimeout > 0 {
+		_ = h.c.nc.SetWriteDeadline(now.Add(h.s.WriteTimeout))
+	}
 }
 
 func (h *serverHandler) writeServerLiteral(body []byte) {

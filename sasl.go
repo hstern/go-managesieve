@@ -21,9 +21,20 @@ type SASLClient interface {
 // with each client response (nil on the first call when the client sent
 // no initial response). It returns a challenge to send and done=false to
 // continue, or done=true to accept the authentication; a non-nil error
-// rejects it.
+// rejects it. When done is true, a non-empty challenge is sent to the
+// client as the final SASL data in the success response (e.g. a
+// mutual-authentication signature).
 type SASLServer interface {
 	Next(response []byte) (challenge []byte, done bool, err error)
+}
+
+// SASLFinalReceiver is an optional interface a SASLClient may implement
+// to receive the server's final SASL data carried in a successful
+// "OK (SASL ...)" response — for example to verify a server signature in
+// a mutual-authentication mechanism. Mechanisms without a server-final
+// step (such as PLAIN) need not implement it.
+type SASLFinalReceiver interface {
+	SASLFinal(data []byte) error
 }
 
 // ErrSASLAborted is returned by the server-side AUTHENTICATE handling
