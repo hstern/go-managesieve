@@ -148,6 +148,11 @@ func (c *Client) Authenticate(m SASLClient) error {
 			return err
 		}
 		if st, ok := parseStatus(toks); ok {
+			if st.status == statusOK {
+				if err := deliverSASLFinal(m, st); err != nil {
+					return err
+				}
+			}
 			return st.err()
 		}
 		challenge, err := decodeChallenge(toks)
@@ -164,6 +169,23 @@ func (c *Client) Authenticate(m SASLClient) error {
 			return err
 		}
 	}
+}
+
+// deliverSASLFinal hands the server's final "(SASL ...)" data to the
+// mechanism if it implements SASLFinalReceiver. A no-op otherwise.
+func deliverSASLFinal(m SASLClient, st *response) error {
+	if st.code == nil || st.code.Name != CodeSASL || st.code.Arg == "" {
+		return nil
+	}
+	f, ok := m.(SASLFinalReceiver)
+	if !ok {
+		return nil
+	}
+	data, err := base64.StdEncoding.DecodeString(st.code.Arg)
+	if err != nil {
+		return fmt.Errorf("managesieve: invalid final SASL data: %w", err)
+	}
+	return f.SASLFinal(data)
 }
 
 func decodeChallenge(toks []token) ([]byte, error) {

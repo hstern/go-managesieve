@@ -22,3 +22,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   and `ENCRYPT-NEEDED` enforcement.
 - Conformance tests against the RFC 5804 §2 examples, a client⇄server
   loopback suite, and a build-tagged live-server integration test.
+- `Server.ReadTimeout` / `Server.WriteTimeout` for per-command deadlines.
+- `SASLFinalReceiver`, an optional `SASLClient` interface that receives
+  the server's final `(SASL ...)` data (e.g. for mutual-auth mechanisms);
+  the server emits it from a `SASLServer` that returns final data on
+  completion.
