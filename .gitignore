@@ -1,0 +1,8 @@
+# Test and coverage artifacts
+*.out
+*.test
+coverage.*
+
+# Editor / OS noise
+.DS_Store
+*.swp
