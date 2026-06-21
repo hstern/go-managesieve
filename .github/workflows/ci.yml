@@ -48,3 +48,36 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           version: latest
+
+  # Non-required: exercises the client against a real Dovecot Pigeonhole
+  # server. Kept out of branch protection so a server hiccup never blocks
+  # a merge; static/test/lint remain the gates.
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+      - name: Start Dovecot Pigeonhole
+        run: |
+          docker run -d --name dovecot -p 127.0.0.1:4190:4190 \
+            -v "$PWD/testdata/dovecot.conf:/etc/dovecot/dovecot.conf:ro" \
+            dovecot/dovecot:2.3-latest
+          for i in $(seq 1 30); do
+            if timeout 1 bash -c '</dev/tcp/127.0.0.1/4190' 2>/dev/null; then
+              echo "ManageSieve is ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "Dovecot did not become ready"; docker logs dovecot; exit 1
+      - name: Run integration test
+        env:
+          MANAGESIEVE_ADDR: 127.0.0.1:4190
+          MANAGESIEVE_USER: testuser
+          MANAGESIEVE_PASS: testpass
+          MANAGESIEVE_TLS: none
+        run: go test -tags managesieve_integration -v ./...
+      - name: Dovecot logs on failure
+        if: failure()
+        run: docker logs dovecot
