@@ -37,3 +37,7 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   optionally upgrades TLS and authenticates, and transparently follows
   `REFERRAL` redirects to the referred server (capped). `ReferralError`
   gains `Addr()` to parse the `sieve://` target into a dialable host:port.
+- Built-in SASL client mechanisms beyond PLAIN: `External` (EXTERNAL),
+  `OAuthBearer` (OAUTHBEARER, RFC 7628), and `ScramSHA256` (SCRAM-SHA-256,
+  RFC 7677, with mutual server-signature verification) — all standard
+  library only.
