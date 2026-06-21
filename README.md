@@ -41,14 +41,57 @@ if err := c.Authenticate(managesieve.PlainAuth("", "user", "secret")); err != ni
 	log.Fatal(err)
 }
 
-// Upload a script and make it active.
-if err := c.PutScript("main", "require \"fileinto\";\nfileinto \"INBOX\";\n"); err != nil {
+// Upload a script and make it active. PutScript also returns any
+// non-fatal compiler warnings the server reported.
+if _, err := c.PutScript("main", "require \"fileinto\";\nfileinto \"INBOX\";\n"); err != nil {
 	log.Fatal(err)
 }
 if err := c.SetActive("main"); err != nil {
 	log.Fatal(err)
 }
 ```
+
+## Serving
+
+Implement `Backend` and `Session` (embed `UnimplementedSession` to supply
+only the commands you support) and hand them to a `Server`:
+
+```go
+type backend struct{ /* your script store */ }
+
+func (b *backend) NewSession(*managesieve.ServerConn) (managesieve.Session, error) {
+	return &session{}, nil
+}
+
+type session struct {
+	managesieve.UnimplementedSession // "not implemented" defaults
+}
+
+func (*session) AuthMechanisms() []string { return []string{"PLAIN"} }
+
+func (*session) Authenticate(mech string) (managesieve.SASLServer, error) {
+	return managesieve.PlainServer(func(_, user, pass string) error {
+		// check user/pass against your store; return an error to reject
+		return nil
+	}), nil
+}
+
+// ...implement ListScripts / GetScript / PutScript / SetActive / ...
+
+func main() {
+	l, _ := net.Listen("tcp", ":4190")
+	srv := managesieve.NewServer(&backend{})
+	srv.SieveExtensions = []string{"fileinto", "vacation"}
+	// srv.TLSConfig = ... // advertise STARTTLS and require TLS for auth
+	log.Fatal(srv.Serve(l))
+}
+```
+
+The server owns the wire protocol and session state machine (greeting,
+STARTTLS, the SASL exchange, command parsing, response framing); your
+`Session` owns script storage and credential checks. Return a
+`*managesieve.ServerError` from a `Session` method to control the
+response code (e.g. `NONEXISTENT`, a `QUOTA` code).
 
 ## Scope
 

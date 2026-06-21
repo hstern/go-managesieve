@@ -18,7 +18,7 @@
 //	defer c.Logout()
 //	if err := c.StartTLS(tlsConfig); err != nil { /* ... */ }
 //	if err := c.Authenticate(managesieve.PlainAuth("", "user", "pass")); err != nil { /* ... */ }
-//	if err := c.PutScript("main", scriptBody); err != nil { /* ... */ }
+//	if _, err := c.PutScript("main", scriptBody); err != nil { /* ... */ }
 //	if err := c.SetActive("main"); err != nil { /* ... */ }
 //
 // The package targets RFC 5804 and is verified against Dovecot
