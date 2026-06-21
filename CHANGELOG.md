@@ -31,3 +31,5 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   post-authentication additions such as the `OWNER` capability appear in
   `Capabilities()`. The server advertises `OWNER` when its `Session`
   implements the optional `SessionOwner` interface.
+- `Client.RenameScriptFallback`, an opt-in copy-based rename for servers
+  that predate RFC 5804 and lack the `RENAMESCRIPT` command.

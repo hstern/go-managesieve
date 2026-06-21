@@ -115,6 +115,54 @@ func (c *Client) RenameScript(oldName, newName string) error {
 	return c.execOK("RENAMESCRIPT " + quote(oldName) + " " + quote(newName))
 }
 
+// RenameScriptFallback renames a script without using the RENAMESCRIPT
+// command, for servers that predate RFC 5804 and do not implement it. It
+// emulates the rename by copying: GETSCRIPT the old script, PUTSCRIPT it
+// under the new name, transfer the active flag with SETACTIVE if the old
+// script was active, then DELETESCRIPT the old name.
+//
+// This is deliberately opt-in: prefer the single-command RenameScript
+// where the server supports it. The emulation is NOT atomic — a failure
+// partway through can leave both names present; callers should be prepared
+// to reconcile. It returns a *ServerError with NONEXISTENT if the source
+// is missing or ALREADYEXISTS if the target already exists.
+func (c *Client) RenameScriptFallback(oldName, newName string) error {
+	scripts, err := c.ListScripts()
+	if err != nil {
+		return err
+	}
+	var oldExists, newExists, oldActive bool
+	for _, s := range scripts {
+		switch s.Name {
+		case oldName:
+			oldExists, oldActive = true, s.Active
+		case newName:
+			newExists = true
+		}
+	}
+	if !oldExists {
+		return &ServerError{Status: statusNO, Code: &ResponseCode{Name: CodeNonexistent}, Text: "no such script"}
+	}
+	if newExists {
+		return &ServerError{Status: statusNO, Code: &ResponseCode{Name: CodeAlreadyExists}, Text: "target script already exists"}
+	}
+	body, err := c.GetScript(oldName)
+	if err != nil {
+		return err
+	}
+	if _, err := c.PutScript(newName, body); err != nil {
+		return err
+	}
+	if oldActive {
+		// Activating the new script implicitly deactivates the old one,
+		// which is required before it can be deleted.
+		if err := c.SetActive(newName); err != nil {
+			return err
+		}
+	}
+	return c.DeleteScript(oldName)
+}
+
 // HaveSpace asks whether a script of the given byte size could be stored
 // under name (RFC 5804 §2.5). It returns nil if there is room, or a
 // *ServerError with a QUOTA code (possibly QUOTA/maxscripts or

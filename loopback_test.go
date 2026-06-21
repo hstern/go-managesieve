@@ -380,6 +380,57 @@ func TestRenameAndHaveSpaceOK(t *testing.T) {
 	}
 }
 
+func TestRenameScriptFallback(t *testing.T) {
+	c, _ := authedClient(t)
+	defer func() { _ = c.Close() }()
+
+	body := "require [\"fileinto\"];\r\nfileinto \"INBOX\";\r\n"
+	if _, err := c.PutScript("old", body); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetActive("old"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.RenameScriptFallback("old", "new"); err != nil {
+		t.Fatalf("RenameScriptFallback: %v", err)
+	}
+
+	scripts, _ := c.ListScripts()
+	if len(scripts) != 1 || scripts[0].Name != "new" || !scripts[0].Active {
+		t.Fatalf("after fallback rename: %+v (want only 'new', active)", scripts)
+	}
+	got, err := c.GetScript("new")
+	if err != nil {
+		t.Fatalf("GetScript(new): %v", err)
+	}
+	if got != body {
+		t.Fatalf("body not preserved across fallback rename:\n got %q\nwant %q", got, body)
+	}
+}
+
+func TestRenameScriptFallbackErrors(t *testing.T) {
+	c, _ := authedClient(t)
+	defer func() { _ = c.Close() }()
+
+	assertCode := func(err error, code string) {
+		t.Helper()
+		var se *ServerError
+		if !errors.As(err, &se) || se.CodeName() != code {
+			t.Fatalf("want %s, got %v", code, err)
+		}
+	}
+	assertCode(c.RenameScriptFallback("missing", "x"), CodeNonexistent)
+
+	if _, err := c.PutScript("a", "stop;\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.PutScript("b", "stop;\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	assertCode(c.RenameScriptFallback("a", "b"), CodeAlreadyExists)
+}
+
 func TestNoop(t *testing.T) {
 	c, _ := authedClient(t)
 	defer func() { _ = c.Close() }()
