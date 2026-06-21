@@ -6,27 +6,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-21
+
 ### Added
 
-- Shared wire core: CRLF framing, quoted strings, `{n+}`/`{n}` literals,
-  a typed `OK`/`NO`/`BYE` response model with structured `ResponseCode`s,
-  and `ServerError` / `ReferralError`.
-- Client: `Dial`, `DialTLS`, `NewClient`, in-place `StartTLS` with
-  capability re-negotiation, SASL `Authenticate` (pluggable `SASLClient`,
-  built-in `PlainAuth`), and the full command set (`PutScript`,
-  `GetScript`, `ListScripts`, `SetActive`, `DeleteScript`,
-  `RenameScript`, `CheckScript`, `HaveSpace`, `Noop`, `Logout`).
-- Server: `Server`/`Serve` with a consumer-implemented `Backend` /
-  `Session` (and `UnimplementedSession`), STARTTLS, the server-side SASL
-  exchange (`SASLServer`, built-in `PlainServer`), pre-/post-auth gating,
-  and `ENCRYPT-NEEDED` enforcement.
-- Conformance tests against the RFC 5804 §2 examples, a client⇄server
-  loopback suite, and a build-tagged live-server integration test.
-- `Server.ReadTimeout` / `Server.WriteTimeout` for per-command deadlines.
-- `SASLFinalReceiver`, an optional `SASLClient` interface that receives
-  the server's final `(SASL ...)` data (e.g. for mutual-auth mechanisms);
-  the server emits it from a `SASLServer` that returns final data on
-  completion.
 - The client re-reads capabilities after a successful `Authenticate`, so
   post-authentication additions such as the `OWNER` capability appear in
   `Capabilities()`. The server advertises `OWNER` when its `Session`
@@ -45,3 +28,31 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `Get`/`Put`, a `Do` helper that auto-reconnects on transport errors
   (but not on protocol errors), NOOP health checks, and a bounded idle
   set.
+
+## [0.1.0] - 2026-06-21
+
+### Added
+
+- Shared wire core: CRLF framing, quoted strings, `{n+}`/`{n}` literals,
+  a typed `OK`/`NO`/`BYE` response model with structured `ResponseCode`s,
+  and `ServerError` / `ReferralError`.
+- Client: `Dial`, `DialTLS`, `NewClient`, in-place `StartTLS` with
+  capability re-negotiation, SASL `Authenticate` (pluggable `SASLClient`,
+  built-in `PlainAuth`), and the full command set (`PutScript`,
+  `GetScript`, `ListScripts`, `SetActive`, `DeleteScript`,
+  `RenameScript`, `CheckScript`, `HaveSpace`, `Noop`, `Logout`).
+- Server: `Server`/`Serve` with a consumer-implemented `Backend` /
+  `Session` (and `UnimplementedSession`), STARTTLS, the server-side SASL
+  exchange (`SASLServer`, built-in `PlainServer`), pre-/post-auth gating,
+  and `ENCRYPT-NEEDED` enforcement.
+- `Server.ReadTimeout` / `Server.WriteTimeout` for per-command deadlines.
+- `SASLFinalReceiver`, an optional `SASLClient` interface that receives
+  the server's final `(SASL ...)` data (e.g. for mutual-auth mechanisms);
+  the server emits it from a `SASLServer` that returns final data on
+  completion.
+- Conformance tests against the RFC 5804 §2 examples, a client⇄server
+  loopback suite, and a build-tagged live-server integration test.
+
+[Unreleased]: https://github.com/hstern/go-managesieve/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/hstern/go-managesieve/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/hstern/go-managesieve/releases/tag/v0.1.0
