@@ -33,3 +33,7 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   implements the optional `SessionOwner` interface.
 - `Client.RenameScriptFallback`, an opt-in copy-based rename for servers
   that predate RFC 5804 and lack the `RENAMESCRIPT` command.
+- `Connect` with `WithStartTLS` / `WithAuth` / `WithMaxReferrals`: dials,
+  optionally upgrades TLS and authenticates, and transparently follows
+  `REFERRAL` redirects to the referred server (capped). `ReferralError`
+  gains `Addr()` to parse the `sieve://` target into a dialable host:port.
