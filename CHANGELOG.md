@@ -41,3 +41,7 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `OAuthBearer` (OAUTHBEARER, RFC 7628), and `ScramSHA256` (SCRAM-SHA-256,
   RFC 7677, with mutual server-signature verification) — all standard
   library only.
+- `Pool`: a concurrency-safe connection pool over `Connect`, with
+  `Get`/`Put`, a `Do` helper that auto-reconnects on transport errors
+  (but not on protocol errors), NOOP health checks, and a bounded idle
+  set.
