@@ -48,7 +48,8 @@ func (b *memBackend) NewSession(_ *ServerConn) (Session, error) {
 
 type memSession struct {
 	UnimplementedSession
-	be *memBackend
+	be   *memBackend
+	user string
 }
 
 func (s *memSession) AuthMechanisms() []string { return []string{"PLAIN"} }
@@ -59,11 +60,16 @@ func (s *memSession) Authenticate(mech string) (SASLServer, error) {
 	}
 	return PlainServer(func(_, user, pass string) error {
 		if want, ok := s.be.creds[user]; ok && want == pass {
+			s.user = user
 			return nil
 		}
 		return &ServerError{Status: statusNO, Text: "invalid credentials"}
 	}), nil
 }
+
+// Owner implements the optional SessionOwner interface so the server
+// advertises OWNER after authentication.
+func (s *memSession) Owner() string { return s.user }
 
 func (s *memSession) ListScripts() ([]ScriptInfo, error) {
 	st := s.be.store
@@ -268,6 +274,16 @@ func TestScriptLifecycleByteExact(t *testing.T) {
 	}
 	if got != body {
 		t.Fatalf("GetScript not byte-exact:\n got %q\nwant %q", got, body)
+	}
+}
+
+func TestOwnerCapabilityAfterAuth(t *testing.T) {
+	c, _ := authedClient(t)
+	defer func() { _ = c.Close() }()
+	// The client re-reads capabilities after authenticating; the server
+	// advertises OWNER for the authenticated user.
+	if got := c.Capabilities().Owner; got != "alice" {
+		t.Fatalf("Owner = %q, want alice", got)
 	}
 }
 
