@@ -1,5 +1,11 @@
 version: "2"
 
+run:
+  # Lint against a slightly older language version than go.mod's `go`
+  # directive, so the check doesn't reject a binary built with an
+  # earlier Go than the bleeding-edge toolchain this module targets.
+  go: "1.24"
+
 linters:
   enable:
     - errcheck
