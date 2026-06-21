@@ -4,6 +4,8 @@
 package managesieve
 
 import (
+	"net"
+	"net/url"
 	"strings"
 )
 
@@ -199,4 +201,18 @@ type ReferralError struct {
 
 func (e *ReferralError) Error() string {
 	return "managesieve: referral to " + e.URL
+}
+
+// Addr returns the referral target as a "host:port" suitable for Dial,
+// parsed from the sieve:// URL (RFC 5804 §3). The default port 4190 is
+// applied when the URL omits one.
+func (e *ReferralError) Addr() string {
+	u, err := url.Parse(e.URL)
+	if err != nil || u.Host == "" {
+		return ensurePort(strings.TrimPrefix(e.URL, "sieve://"))
+	}
+	if u.Port() == "" {
+		return net.JoinHostPort(u.Hostname(), DefaultPort)
+	}
+	return u.Host
 }
